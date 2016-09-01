@@ -263,6 +263,13 @@
       "hash": "QmdCL8M8DXJdSRnwhpDhukX5r8ydjxnzPJpaKrFudDA8yn",
       "name": "hang-fds",
       "version": "0.0.0"
+    },
+    {
+      "author": "lgierth",
+      "hash": "QmQfeKxQtBN721pekQh6Jq24adFUjnU65YdY3GNczfuG2T",
+      "name": "dir-index-html",
+      "version": "1.0.3",
+      "comment": "This one needs code updates in assets/assets.go too."
     }
   ],
   "gxVersion": "0.4.0",
