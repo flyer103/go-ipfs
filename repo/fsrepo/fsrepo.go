@@ -300,11 +300,7 @@ func APIAddr(repoPath string) (ma.Multiaddr, error) {
 
 	s := string(buf[:n])
 	s = strings.TrimSpace(s)
-	m, err := ma.NewMultiaddr(s)
-	if err != nil {
-		return nil, err
-	}
-	return m, nil
+	return ma.NewMultiaddr(s)
 }
 
 // SetAPIAddr writes the API Addr to the /api file.
