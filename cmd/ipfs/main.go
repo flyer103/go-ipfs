@@ -17,13 +17,6 @@ import (
 	"syscall"
 	"time"
 
-	manet "gx/ipfs/QmPpRcbNUXauP3zWZ1NJMLWpe4QnmEHrd2ba2D3yqWznw7/go-multiaddr-net"
-	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
-
-	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	u "gx/ipfs/QmZNVWh8LLjAavuQ2JXuFmuYH3C11xo988vSgp7UQrTRj1/go-ipfs-util"
-	context "gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
-
 	cmds "github.com/ipfs/go-ipfs/commands"
 	cmdsCli "github.com/ipfs/go-ipfs/commands/cli"
 	cmdsHttp "github.com/ipfs/go-ipfs/commands/http"
@@ -32,7 +25,13 @@ import (
 	repo "github.com/ipfs/go-ipfs/repo"
 	config "github.com/ipfs/go-ipfs/repo/config"
 	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+
+	manet "gx/ipfs/QmPpRcbNUXauP3zWZ1NJMLWpe4QnmEHrd2ba2D3yqWznw7/go-multiaddr-net"
+	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
 	loggables "gx/ipfs/QmYrv4LgCC8FhG2Ab4bwuq5DqBdwMtx3hMb3KKJDZcr2d7/go-libp2p-loggables"
+	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
+	u "gx/ipfs/QmZNVWh8LLjAavuQ2JXuFmuYH3C11xo988vSgp7UQrTRj1/go-ipfs-util"
+	context "gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 )
 
 // log is the command logger
@@ -591,21 +590,37 @@ func profileIfEnabled() (func(), error) {
 	return func() {}, nil
 }
 
+var apiFileErrorFmt string = `Failed to parse %[1]s/api file.
+	error: %[2]s
+If there is no daemon running, it is safe to delete it.
+You can do it with:
+	ps aux | grep ipfs # check there is no ipfs daemon
+	rm %[1]s/api
+`
+
 // getApiClient checks the repo, and the given options, checking for
 // a running API service. if there is one, it returns a client.
 // otherwise, it returns errApiNotRunning, or another error.
 func getApiClient(repoPath, apiAddrStr string) (cmdsHttp.Client, error) {
-
-	if apiAddrStr == "" {
-		var err error
-		if apiAddrStr, err = fsrepo.APIAddr(repoPath); err != nil {
+	var addr ma.Multiaddr
+	var err error
+	if len(apiAddrStr) != 0 {
+		addr, err = ma.NewMultiaddr(apiAddrStr)
+		if err != nil {
 			return nil, err
 		}
-	}
+	} else {
+		addr, err = fsrepo.APIAddr(repoPath)
+		if err == repo.ErrApiNotRunning {
+			return nil, err
+		}
 
-	addr, err := ma.NewMultiaddr(apiAddrStr)
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, fmt.Errorf(apiFileErrorFmt, repoPath, err.Error())
+		}
+	}
+	if len(addr.Protocols()) == 0 {
+		return nil, fmt.Errorf(apiFileErrorFmt, repoPath, "multiaddr doesn't provide any protocols")
 	}
 
 	return apiClientForAddr(addr)
